@@ -1,9 +1,24 @@
+from dotenv import load_dotenv
+import os
+
 import subprocess
 from openai import OpenAI
 import requests
 import json
-my_api_key = 'test'
-client = OpenAI(api_key=my_api_key)
+
+# ! PARAMS
+env_filename = ".env"
+env_key_name = "OPENAI_KEY"
+
+# Construct the path to the .env file
+script_dir = os.path.dirname(os.path.abspath(__file__))
+env_path = os.path.join(script_dir, env_filename)
+
+# Load environment variables from .env file
+load_dotenv(env_path)
+OPENAI_KEY = os.getenv(env_key_name)
+
+client = OpenAI(api_key=OPENAI_KEY)
 
 system_prompt = (
     "system: You are being run in a scaffold in a shell on a Macbook. When you want to run a "
@@ -31,7 +46,7 @@ def run_command(command):
 def stream_gpt_response(user_input, temperature=0):
     prompt_to_send = system_prompt + user_input
     headers = {
-        "Authorization": f"Bearer {my_api_key}",
+        "Authorization": f"Bearer {OPENAI_KEY}",
         "Content-Type": "application/json"
     }
 
