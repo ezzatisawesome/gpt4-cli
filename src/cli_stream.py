@@ -1,24 +1,14 @@
 from dotenv import load_dotenv
 import os
+import argparse
 
 import subprocess
-from openai import OpenAI
 import requests
 import json
 
-# ! PARAMS
+# ! PARAMA
 env_filename = ".env"
 env_key_name = "OPENAI_KEY"
-
-# Construct the path to the .env file
-script_dir = os.path.dirname(os.path.abspath(__file__))
-env_path = os.path.join(script_dir, env_filename)
-
-# Load environment variables from .env file
-load_dotenv(env_path)
-OPENAI_KEY = os.getenv(env_key_name)
-
-client = OpenAI(api_key=OPENAI_KEY)
 
 system_prompt = (
     "system: You are being run in a scaffold in a shell on a Macbook. When you want to run a "
@@ -43,7 +33,7 @@ def run_command(command):
         return e.stderr.strip()
     
 
-def stream_gpt_response(user_input, temperature=0):
+def stream_gpt_response(OPENAI_KEY, user_input, temperature=0):
     prompt_to_send = system_prompt + user_input
     headers = {
         "Authorization": f"Bearer {OPENAI_KEY}",
@@ -83,22 +73,54 @@ def stream_gpt_response(user_input, temperature=0):
 
     return buffer.strip()
 
+def set_api_key(api_key):
+    # Construct the path to the .env file
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    parent_dir = os.path.dirname(script_dir)
+    env_path = os.path.join(parent_dir, env_filename)
+
+    with open(env_path, 'w') as f:
+        f.write(f"OPENAI_KEY={api_key}\n")
+    print(f"API Key set and saved in {env_path}")
+
 
 def main():
-    while True:
-        user_input = input("query> ")
-        if user_input.lower() == 'exit':
-            break
+    parser = argparse.ArgumentParser(description='GPT-CLI Application')
+    parser.add_argument('--key', help='Set the OpenAI API key', type=str)
 
-        streamed_output = stream_gpt_response(user_input, temperature=0)
+    args = parser.parse_args()
 
-        if "<bash>" in streamed_output:
-            command_to_run = streamed_output.strip("<bash>").strip("</bash>").strip()
-            print(f"output: {command_to_run}")
-            approval = input("should I run this command? (y/n): ")
-            if approval.lower() == 'y':
-                output = run_command(command_to_run)
-                print(f"output: \n{output}\n")
+    if args.key:
+        print("HELLOOOO")
+        set_api_key(args.key)
+    else:
+        # Load environment variables from .env file
+
+        # Construct the path to the .env file
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        parent_dir = os.path.dirname(script_dir)
+        env_path = os.path.join(parent_dir, env_filename)
+
+        load_dotenv(env_path)
+        OPENAI_KEY = os.getenv(env_key_name)
+        if OPENAI_KEY is None:
+            raise ValueError(f"API key not found in. Ensure that API key is set.")
+
+        # ... rest of your main function logic ...
+        while True:
+            user_input = input("query> ")
+            if user_input.lower() == 'exit':
+                break
+
+            streamed_output = stream_gpt_response(OPENAI_KEY, user_input, temperature=0)
+
+            if "<bash>" in streamed_output:
+                command_to_run = streamed_output.strip("<bash>").strip("</bash>").strip()
+                print(f"output: {command_to_run}")
+                approval = input("should I run this command? (y/n): ")
+                if approval.lower() == 'y':
+                    output = run_command(command_to_run)
+                    print(f"output: \n{output}\n")
 
 
 if __name__ == "__main__":
